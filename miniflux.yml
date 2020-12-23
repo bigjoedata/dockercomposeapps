@@ -1,0 +1,45 @@
+## This will run Miniflux behind Traefix, change upper case variables as appropriate.
+
+  miniflux:
+    image: miniflux/miniflux:latest
+    container_name: miniflux
+    depends_on:
+      - db
+    expose:
+      - "8080"
+    networks:
+      - t2_proxy
+      - mfnet
+#    security_opt:
+#      - no-new-privileges:true
+    environment:
+      - DATABASE_URL=postgres://miniflux:MINIFLUXDBPASSWORD@db/miniflux?sslmode=disable
+      - RUN_MIGRATIONS=1
+      - CREATE_ADMIN=1
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=ADMINPASSWORD
+      - BASE_URL=https://mf.hostname.com
+      - TZ=$TZ
+    labels:
+      - "traefik.enable=true"
+#      - "traefik.http.routers.miniflux.rule=Host(`mf.hostname.com`)"
+#      - "traefik.http.routers.miniflux.entrypoints=websecure"
+      - "traefik.http.routers.miniflux-rtr.entrypoints=https"
+      - "traefik.http.routers.miniflux-rtr.rule=Host(`mf.$DOMAINNAME`)"
+      - "traefik.http.routers.miniflux-rtr.tls=true"
+      - "traefik.http.routers.miniflux-rtr.service=miniflux-svc"
+      - "traefik.http.services.miniflux-svc.loadbalancer.server.port=8080"
+#      - "traefik.http.routers.miniflux.tls.certresolver=dns-cloudflare"
+
+  db:
+    image: postgres:latest
+    container_name: postgres
+    networks:
+      - mfnet
+    environment:
+      - POSTGRES_USER=miniflux
+      - POSTGRES_PASSWORD=MINIFLUXDBPASSWORD
+      - TZ=$TZ
+    volumes:
+    #      - miniflux-db:/var/lib/postgresql/data
+      - $DOCKERDIR/miniflux/postgres:/var/lib/postgresql/data
